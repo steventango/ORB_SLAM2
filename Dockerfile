@@ -38,12 +38,12 @@ RUN make -j8
 
 
 WORKDIR /
-RUN curl -fsSL https://github.com/opencv/opencv/archive/2.4.13.zip -o 2.4.13.zip
-RUN unzip 2.4.13.zip
-RUN rm 2.4.13.zip
-WORKDIR /opencv-2.4.13/
+RUN curl -fsSL https://github.com/opencv/opencv/archive/3.3.1.zip -o 3.3.1.zip
+RUN unzip 3.3.1.zip
+RUN rm 3.3.1.zip
+WORKDIR /opencv-3.3.1/
 RUN mkdir build
-WORKDIR /opencv-2.4.13/build
+WORKDIR /opencv-3.3.1/build
 RUN cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
 RUN make -j8
 RUN make install
@@ -68,16 +68,12 @@ RUN rosdep update
 
 
 WORKDIR /
-RUN git clone https://github.com/raulmur/ORB_SLAM2.git ORB_SLAM2
+COPY . /ORB_SLAM2
 WORKDIR /ORB_SLAM2
-RUN sed -i '31s/$/8/' build.sh
 RUN ./build.sh
 
 
 RUN ln -s /usr/include/eigen3/Eigen /usr/local/include/Eigen
-RUN sed -i '43ifind_package(Boost COMPONENTS system)' Examples/ROS/ORB_SLAM2/CMakeLists.txt
-RUN sed -i '50i\${Boost_INCLUDE_DIRS}' Examples/ROS/ORB_SLAM2/CMakeLists.txt
-RUN sed -i '57i\${Boost_LIBRARIES}' Examples/ROS/ORB_SLAM2/CMakeLists.txt
 RUN . /opt/ros/kinetic/setup.sh && echo "export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/ORB_SLAM2/Examples/ROS" >> ~/.bashrc
 RUN . /opt/ros/kinetic/setup.sh && export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/ORB_SLAM2/Examples/ROS && ./build_ros.sh
 
