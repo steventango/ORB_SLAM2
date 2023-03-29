@@ -97,3 +97,14 @@ src/ros_rgbd.cc
 target_link_libraries(RGBD
 ${LIBS}
 )
+
+# Node for road reconstruction
+rosbuild_add_executable(MonoRR
+src/RR/ros_mono_rr.cc
+src/RR/ViewerRR.h
+src/RR/ViewerRR.cc
+)
+
+target_link_libraries(MonoRR
+${LIBS}
+)
