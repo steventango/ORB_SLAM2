@@ -34,6 +34,7 @@
 #include"../../../include/Map.h"
 #include"../../../include/MapPoint.h"
 
+#include "std_msgs/Int8MultiArray.h"
 #include "std_msgs/Float32MultiArray.h"
 #include "std_msgs/MultiArrayDimension.h"
 
@@ -75,7 +76,7 @@ void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keyp
     int rows = im_0.rows;
     int cols = im_0.cols;
     int channels = im_0.channels();
-    std_msgs::Float32MultiArray keyframes_msg;
+    std_msgs::Int8MultiArray keyframes_msg;
     keyframes_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
     keyframes_msg.layout.dim[0].label = "j";
     keyframes_msg.layout.dim[0].size = m;
@@ -176,7 +177,7 @@ int main(int argc, char **argv)
     ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler("orb_slam2");
-    ros::Publisher pub_keyframes = nodeHandler.advertise<std_msgs::Float32MultiArray>("keyframes", 1);
+    ros::Publisher pub_keyframes = nodeHandler.advertise<std_msgs::Int8MultiArray>("keyframes", 1);
     ros::Publisher pub_keypoints = nodeHandler.advertise<std_msgs::Float32MultiArray>("keypoints", 1);
     ros::Publisher pub_mappoints = nodeHandler.advertise<std_msgs::Float32MultiArray>("mappoints", 1);
     ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
