@@ -60,7 +60,7 @@ void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keyp
     if (!m) {
         return;
     }
-    const vector<ORB_SLAM2::MapPoint*> mappoints = mpSLAM->GetTrackedMapPoints();
+    const vector<ORB_SLAM2::MapPoint*> mappoints = map->GetAllMapPoints();
     int n = mappoints.size();
     if (!n) {
         return;
