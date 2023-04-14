@@ -188,6 +188,7 @@ public:
     const int mnMaxY;
     const cv::Mat mK;
 
+    cv::Mat im;
 
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
@@ -222,7 +223,7 @@ protected:
     // Bad flags
     bool mbNotErase;
     bool mbToBeErased;
-    bool mbBad;    
+    bool mbBad;
 
     float mHalfBaseline; // Only for visualization
 
