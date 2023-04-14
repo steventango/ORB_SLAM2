@@ -29,7 +29,13 @@
 
 #include<opencv2/core/core.hpp>
 
+#include"../../../include/KeyFrame.h"
 #include"../../../include/System.h"
+#include"../../../include/Map.h"
+#include"../../../include/MapPoint.h"
+
+#include "std_msgs/Float32MultiArray.h"
+#include "std_msgs/MultiArrayDimension.h"
 
 using namespace std;
 
@@ -39,9 +45,118 @@ public:
     ImageGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
 
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
-
+    void publish(ros::Publisher pub_keyframes, ros::Publisher pub_keypoints, ros::Publisher pub_mappoints);
     ORB_SLAM2::System* mpSLAM;
 };
+
+void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keypoints, ros::Publisher pub_mappoints) {
+    ORB_SLAM2::Map* map = mpSLAM->mpMap;
+    if (!map) {
+        return;
+    }
+    const vector<ORB_SLAM2::KeyFrame*> keyframes = map->GetAllKeyFrames();
+    int m = keyframes.size();
+    if (!m) {
+        return;
+    }
+    const vector<ORB_SLAM2::MapPoint*> mappoints = mpSLAM->GetTrackedMapPoints();
+    int n = mappoints.size();
+    if (!n) {
+        return;
+    }
+    ORB_SLAM2::KeyFrame* keyframe_0 = keyframes[0];
+    if (!keyframe_0) {
+        return;
+    }
+    cv::Mat im_0 = keyframes[0]->im;
+    if (im_0.empty()) {
+        return;
+    }
+    int rows = im_0.rows;
+    int cols = im_0.cols;
+    int channels = im_0.channels();
+    std_msgs::Float32MultiArray keyframes_msg;
+    keyframes_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keyframes_msg.layout.dim[0].label = "j";
+    keyframes_msg.layout.dim[0].size = m;
+    keyframes_msg.layout.dim[0].stride = m * rows * cols * channels;
+    keyframes_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keyframes_msg.layout.dim[1].label = "height";
+    keyframes_msg.layout.dim[1].size = rows;
+    keyframes_msg.layout.dim[1].stride = rows * cols * channels;
+    keyframes_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keyframes_msg.layout.dim[2].label = "width";
+    keyframes_msg.layout.dim[2].size = cols;
+    keyframes_msg.layout.dim[2].stride = cols * channels;
+    keyframes_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keyframes_msg.layout.dim[3].label = "channel";
+    keyframes_msg.layout.dim[3].size = channels;
+    keyframes_msg.layout.dim[3].stride = channels;
+    keyframes_msg.data.resize(keyframes_msg.layout.dim[0].stride);
+    std_msgs::Float32MultiArray keypoints_msg;
+    // Hard coded max of 1000 keypoints per keyframe
+    int o = 1000;
+    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keypoints_msg.layout.dim[0].label = "j";
+    keypoints_msg.layout.dim[0].size = m;
+    keypoints_msg.layout.dim[0].stride = m * o * 2;
+    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keypoints_msg.layout.dim[1].label = "k";
+    keypoints_msg.layout.dim[1].size = o;
+    keypoints_msg.layout.dim[1].stride = o * 2;
+    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keypoints_msg.layout.dim[2].label = "keypoint";
+    keypoints_msg.layout.dim[2].size = 2;
+    keypoints_msg.layout.dim[2].stride = 2;
+    keypoints_msg.data.resize(keypoints_msg.layout.dim[0].stride);
+    for (int j = 0; j < m; j++) {
+        ORB_SLAM2::KeyFrame* keyframe = keyframes[j];
+        if (!keyframe) {
+            continue;
+        }
+        cv::Mat im = keyframe->im;
+        if (im.empty()) {
+            continue;
+        }
+        for (int a = 0; a < rows; a++) {
+            for (int b = 0; b < cols; b++) {
+                for (int c = 0; c < channels; c++) {
+                    keyframes_msg.data[j * rows * cols * channels + a * cols * channels + b * channels + c] = im.at<cv::Vec3b>(a, b)[c];
+                }
+            }
+        }
+        std::vector<cv::KeyPoint> keypoints = keyframe->mvKeys;
+        for (int k = 0; k < min(static_cast<std::vector<int>::size_type>(o), keypoints.size()); k++) {
+            cv::KeyPoint keypoint = keypoints[k];
+            keypoints_msg.data[j * o * 2 + k * 2 + 0] = keypoint.pt.x;
+            keypoints_msg.data[j * o * 2 + k * 2 + 1] = keypoint.pt.y;
+        }
+    }
+    pub_keyframes.publish(keyframes_msg);
+    pub_keypoints.publish(keypoints_msg);
+    std_msgs::Float32MultiArray mappoints_msg;
+    mappoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    mappoints_msg.layout.dim[0].label = "j";
+    mappoints_msg.layout.dim[0].size = n;
+    mappoints_msg.layout.dim[0].stride = n * 3;
+    mappoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    mappoints_msg.layout.dim[1].label = "map_point";
+    mappoints_msg.layout.dim[1].size = 3;
+    mappoints_msg.layout.dim[1].stride = 3;
+    mappoints_msg.data.resize(mappoints_msg.layout.dim[0].stride);
+
+    for (int j = 0; j < n; j++) {
+        ORB_SLAM2::MapPoint* map_point = mappoints[j];
+        if (!map_point || map_point->isBad()) {
+            continue;
+        }
+        cv::Mat pos = map_point->GetWorldPos();
+        mappoints_msg.data[j * 3] = pos.at<float>(0);
+        mappoints_msg.data[j * 3 + 1] = pos.at<float>(1);
+        mappoints_msg.data[j * 3 + 2] = pos.at<float>(2);
+    }
+    pub_mappoints.publish(mappoints_msg);
+}
 
 int main(int argc, char **argv)
 {
@@ -50,19 +165,27 @@ int main(int argc, char **argv)
 
     if(argc != 3)
     {
-        cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings" << endl;        
+        cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings" << endl;
         ros::shutdown();
         return 1;
-    }    
+    }
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
 
     ImageGrabber igb(&SLAM);
 
-    ros::NodeHandle nodeHandler;
+    ros::NodeHandle nodeHandler("orb_slam2");
+    ros::Publisher pub_keyframes = nodeHandler.advertise<std_msgs::Float32MultiArray>("keyframes", 1);
+    ros::Publisher pub_keypoints = nodeHandler.advertise<std_msgs::Float32MultiArray>("keypoints", 1);
+    ros::Publisher pub_mappoints = nodeHandler.advertise<std_msgs::Float32MultiArray>("mappoints", 1);
     ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
+    int duration = 1;
+    ros::Timer timer = nodeHandler.createTimer(
+        ros::Duration(duration),
+        boost::bind(&ImageGrabber::publish, &igb, pub_keyframes, pub_keypoints, pub_mappoints)
+    );
     ros::spin();
 
     // Stop all threads
@@ -92,5 +215,3 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 
     mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
 }
-
-
