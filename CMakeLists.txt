@@ -63,7 +63,6 @@ src/Map.cc
 src/MapDrawer.cc
 src/Optimizer.cc
 src/PnPsolver.cc
-src/RoadDrawer.cc
 src/Frame.cc
 src/KeyFrameDatabase.cc
 src/Sim3Solver.cc
