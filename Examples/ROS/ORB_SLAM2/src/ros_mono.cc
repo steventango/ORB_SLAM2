@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     ros::Publisher pub_mappoints = nodeHandler.advertise<std_msgs::Float32MultiArray>("mappoints", 1);
     ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
-    int duration = 1;
+    int duration = 10;
     ros::Timer timer = nodeHandler.createTimer(
         ros::Duration(duration),
         boost::bind(&ImageGrabber::publish, &igb, pub_keyframes, pub_keypoints, pub_mappoints)
