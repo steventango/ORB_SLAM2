@@ -26,8 +26,8 @@
 namespace ORB_SLAM2
 {
 
-Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, RoadDrawer *pRoadDrawer, Tracking *pTracking, const string &strSettingPath):
-    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpRoadDrawer(pRoadDrawer), mpTracker(pTracking),
+Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath):
+    mpSystem(pSystem), mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpTracker(pTracking),
     mbFinishRequested(false), mbFinished(true), mbStopped(true), mbStopRequested(false)
 {
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
@@ -88,7 +88,6 @@ void Viewer::Run()
     Twc.SetIdentity();
 
     cv::namedWindow("ORB-SLAM2: Current Frame");
-    cv::namedWindow("Road Reconstruction");
 
     bool bFollow = true;
     bool bLocalizationMode = false;
@@ -137,8 +136,6 @@ void Viewer::Run()
 
         cv::Mat im = mpFrameDrawer->DrawFrame();
         cv::imshow("ORB-SLAM2: Current Frame",im);
-        cv::Mat im_rr = mpRoadDrawer->DrawRoad();
-        cv::imshow("Road Reconstruction", im_rr);
         cv::waitKey(mT);
 
         if(menuReset)

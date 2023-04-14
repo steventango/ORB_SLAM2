@@ -29,7 +29,6 @@
 #include "Tracking.h"
 #include "FrameDrawer.h"
 #include "MapDrawer.h"
-#include "RoadDrawer.h"
 #include "Map.h"
 #include "LocalMapping.h"
 #include "LoopClosing.h"
@@ -123,6 +122,9 @@ public:
     std::vector<MapPoint*> GetTrackedMapPoints();
     std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
 
+    // Map structure that stores the pointers to all KeyFrames and MapPoints.
+    Map* mpMap;
+
 private:
 
     // Input sensor
@@ -133,9 +135,6 @@ private:
 
     // KeyFrame database for place recognition (relocalization and loop detection).
     KeyFrameDatabase* mpKeyFrameDatabase;
-
-    // Map structure that stores the pointers to all KeyFrames and MapPoints.
-    Map* mpMap;
 
     // Tracker. It receives a frame and computes the associated camera pose.
     // It also decides when to insert a new keyframe, create some new MapPoints and
@@ -154,7 +153,6 @@ private:
 
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;
-    RoadDrawer* mpRoadDrawer;
 
     // System threads: Local Mapping, Loop Closing, Viewer.
     // The Tracking thread "lives" in the main execution thread that creates the System object.
