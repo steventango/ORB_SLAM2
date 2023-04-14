@@ -94,47 +94,7 @@ void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keyp
     keyframes_msg.layout.dim[3].size = channels;
     keyframes_msg.layout.dim[3].stride = channels;
     keyframes_msg.data.resize(keyframes_msg.layout.dim[0].stride);
-    std_msgs::Float32MultiArray keypoints_msg;
-    // Hard coded max of 1000 keypoints per keyframe
-    int o = 1000;
-    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
-    keypoints_msg.layout.dim[0].label = "j";
-    keypoints_msg.layout.dim[0].size = m;
-    keypoints_msg.layout.dim[0].stride = m * o * 2;
-    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
-    keypoints_msg.layout.dim[1].label = "k";
-    keypoints_msg.layout.dim[1].size = o;
-    keypoints_msg.layout.dim[1].stride = o * 2;
-    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
-    keypoints_msg.layout.dim[2].label = "keypoint";
-    keypoints_msg.layout.dim[2].size = 2;
-    keypoints_msg.layout.dim[2].stride = 2;
-    keypoints_msg.data.resize(keypoints_msg.layout.dim[0].stride);
-    for (int j = 0; j < m; j++) {
-        ORB_SLAM2::KeyFrame* keyframe = keyframes[j];
-        if (!keyframe) {
-            continue;
-        }
-        cv::Mat im = keyframe->im;
-        if (im.empty()) {
-            continue;
-        }
-        for (int a = 0; a < rows; a++) {
-            for (int b = 0; b < cols; b++) {
-                for (int c = 0; c < channels; c++) {
-                    keyframes_msg.data[j * rows * cols * channels + a * cols * channels + b * channels + c] = im.at<cv::Vec3b>(a, b)[c];
-                }
-            }
-        }
-        std::vector<cv::KeyPoint> keypoints = keyframe->mvKeys;
-        for (int k = 0; k < min(static_cast<std::vector<int>::size_type>(o), keypoints.size()); k++) {
-            cv::KeyPoint keypoint = keypoints[k];
-            keypoints_msg.data[j * o * 2 + k * 2 + 0] = keypoint.pt.x;
-            keypoints_msg.data[j * o * 2 + k * 2 + 1] = keypoint.pt.y;
-        }
-    }
-    pub_keyframes.publish(keyframes_msg);
-    pub_keypoints.publish(keypoints_msg);
+
     std_msgs::Float32MultiArray mappoints_msg;
     mappoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
     mappoints_msg.layout.dim[0].label = "j";
@@ -156,6 +116,54 @@ void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keyp
         mappoints_msg.data[j * 3 + 1] = pos.at<float>(1);
         mappoints_msg.data[j * 3 + 2] = pos.at<float>(2);
     }
+
+    // Hard coded max of 1000 keypoints per keyframe
+    int o = 1000;
+    std_msgs::Float32MultiArray keypoints_msg;
+    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keypoints_msg.layout.dim[0].label = "j";
+    keypoints_msg.layout.dim[0].size = m;
+    keypoints_msg.layout.dim[0].stride = m * o * 3;
+    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keypoints_msg.layout.dim[1].label = "k";
+    keypoints_msg.layout.dim[1].size = o;
+    keypoints_msg.layout.dim[1].stride = o * 3;
+    keypoints_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
+    keypoints_msg.layout.dim[2].label = "keypoint";
+    keypoints_msg.layout.dim[2].size = 3;
+    keypoints_msg.layout.dim[2].stride = 3;
+    keypoints_msg.data.resize(keypoints_msg.layout.dim[0].stride);
+    for (int j = 0; j < m; j++) {
+        ORB_SLAM2::KeyFrame* keyframe = keyframes[j];
+        if (!keyframe) {
+            continue;
+        }
+        cv::Mat im = keyframe->im;
+        if (im.empty()) {
+            continue;
+        }
+        for (int a = 0; a < rows; a++) {
+            for (int b = 0; b < cols; b++) {
+                for (int c = 0; c < channels; c++) {
+                    keyframes_msg.data[j * rows * cols * channels + a * cols * channels + b * channels + c] = im.at<cv::Vec3b>(a, b)[c];
+                }
+            }
+        }
+        std::vector<cv::KeyPoint> keypoints = keyframe->mvKeys;
+        std::vector<ORB_SLAM2::MapPoint*> matches = keyframe->GetMapPointMatches();
+        for (int k = 0; k < min(static_cast<std::vector<int>::size_type>(o), keypoints.size()); k++) {
+            cv::KeyPoint keypoint = keypoints[k];
+            ORB_SLAM2::MapPoint* match = matches[k];
+            if (!match) {
+                continue;
+            }
+            keypoints_msg.data[j * o * 3 + k * 3 + 0] = keypoint.pt.x;
+            keypoints_msg.data[j * o * 3 + k * 3 + 1] = keypoint.pt.y;
+            keypoints_msg.data[j * o * 3 + k * 3 + 2] = match->mnId;
+        }
+    }
+    pub_keyframes.publish(keyframes_msg);
+    pub_keypoints.publish(keypoints_msg);
     pub_mappoints.publish(mappoints_msg);
 }
 
