@@ -23,6 +23,7 @@
 #include<algorithm>
 #include<fstream>
 #include<chrono>
+#include<unordered_map>
 
 #include<ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
@@ -65,17 +66,17 @@ void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keyp
     if (!n) {
         return;
     }
-    ORB_SLAM2::KeyFrame* keyframe_0 = keyframes[0];
-    if (!keyframe_0) {
-        return;
+    unordered_map<ORB_SLAM2::MapPoint*, int> mappoints_index;
+    for (int j = 0; j < n; j++) {
+        ORB_SLAM2::MapPoint* map_point = mappoints[j];
+        if (!map_point || map_point->isBad()) {
+            continue;
+        }
+        mappoints_index[map_point] = j;
     }
-    cv::Mat im_0 = keyframes[0]->im;
-    if (im_0.empty()) {
-        return;
-    }
-    int rows = im_0.rows;
-    int cols = im_0.cols;
-    int channels = im_0.channels();
+    int rows = 480;
+    int cols = 640;
+    int channels = 3;
     std_msgs::UInt8MultiArray keyframes_msg;
     keyframes_msg.layout.dim.push_back(std_msgs::MultiArrayDimension());
     keyframes_msg.layout.dim[0].label = "j";
@@ -151,7 +152,7 @@ void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keyp
         }
         std::vector<cv::KeyPoint> keypoints = keyframe->mvKeys;
         std::vector<ORB_SLAM2::MapPoint*> matches = keyframe->GetMapPointMatches();
-        for (int k = 0; k < min(static_cast<std::vector<int>::size_type>(o), keypoints.size()); k++) {
+        for (unsigned int k = 0; k < min(static_cast<std::vector<int>::size_type>(o), keypoints.size()); k++) {
             cv::KeyPoint keypoint = keypoints[k];
             ORB_SLAM2::MapPoint* match = matches[k];
             if (!match) {
@@ -159,7 +160,7 @@ void ImageGrabber::publish(ros::Publisher pub_keyframes, ros::Publisher pub_keyp
             }
             keypoints_msg.data[j * o * 3 + k * 3 + 0] = keypoint.pt.x;
             keypoints_msg.data[j * o * 3 + k * 3 + 1] = keypoint.pt.y;
-            keypoints_msg.data[j * o * 3 + k * 3 + 2] = match->mnId;
+            keypoints_msg.data[j * o * 3 + k * 3 + 2] = mappoints_index[match];
         }
     }
     pub_keyframes.publish(keyframes_msg);
